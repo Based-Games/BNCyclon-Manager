@@ -13,8 +13,19 @@
   <button class="btn btn-outline-success">Add song</button>
   <hr class="border border-danger border-1 my-4 opacity-50" />
 
+  <input
+    v-model="searchInput"
+    type="text"
+    class="form-control border-primary mb-3"
+    placeholder="Search for song or artist"
+  />
+
+  <p v-if="searchInput && !filteredSongs().length" class="text-danger-emphasis py-2">
+    No songs found!
+  </p>
+
   <div class="row">
-    <div v-for="song in songs" :key="song.id" class="col-sm-3 mb-3">
+    <div v-for="song in filteredSongs()" :key="song.id" class="col-sm-3 mb-3">
       <div class="card">
         <img
           :src="['http://localhost:7364/loadSongJacket?fileName=' + song.fileName]"
@@ -24,8 +35,95 @@
           <h5 class="card-title">{{ song.songTitle }} - {{ song.artist }}</h5>
           <p class="card-text">{{ song.BPM }} BPM</p>
           <p class="card-text">{{ song.ptInfo.replace(/_/g, ' / ') }}</p>
-          <a class="btn btn-outline-info me-2">Edit</a>
+          <a
+            class="btn btn-outline-info me-2"
+            data-bs-toggle="modal"
+            data-bs-target="#editModal"
+            @click="setEditModal(song)"
+            >Edit</a
+          >
           <a class="btn btn-outline-danger">Delete</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="editModal" class="modal">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">
+            Editing: {{ currentSong.songTitle }} - {{ currentSong.artist }}
+          </h5>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="modal"
+            aria-label="Close"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <AppNotice notice="You cannot change the file name or server ID" notice-type="info" />
+          <p>
+            File name: <samp class="text-info">{{ currentSong.fileName }}</samp>
+          </p>
+          <p>
+            Server ID: <samp class="text-info">{{ currentSong.serverId }}</samp>
+          </p>
+          <form>
+            <div class="row">
+              <div class="mb-3 col">
+                <label class="form-label">Title</label>
+                <input v-model="currentSong.songTitle" type="text" class="form-control" />
+              </div>
+              <div class="mb-3 col">
+                <label class="form-label">In-game title</label>
+                <input v-model="currentSong.inGameTitleEn" type="text" class="form-control" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="mb-3 col">
+                <label class="form-label">Artist</label>
+                <input v-model="currentSong.artist" type="text" class="form-control" />
+              </div>
+              <div class="mb-3 col">
+                <label class="form-label">Genre</label>
+                <input v-model="currentSong.genre" type="text" class="form-control" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="mb-3 col">
+                <label class="form-label">Vocalist</label>
+                <input v-model="currentSong.vocalist" type="text" class="form-control" />
+              </div>
+              <div class="mb-3 col">
+                <label class="form-label">Composer</label>
+                <input v-model="currentSong.composedBy" type="text" class="form-control" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="mb-3 col">
+                <label class="form-label">Arranged by</label>
+                <input v-model="currentSong.arrangedBy" type="text" class="form-control" />
+              </div>
+              <div class="mb-3 col">
+                <label class="form-label">Rounded difficulty</label>
+                <input v-model="currentSong.difficulty" type="text" class="form-control" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="mb-3 col">
+                <label class="form-label">BPM</label>
+                <input v-model="currentSong.BPM" type="text" class="form-control" />
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-outline-primary">Save changes</button>
         </div>
       </div>
     </div>
@@ -46,8 +144,10 @@ export default {
   data() {
     return {
       changesMade: false,
-      songs: null,
-      stages: null
+      songs: [],
+      stages: null,
+      currentSong: {},
+      searchInput: ''
     }
   },
   computed: {
@@ -66,6 +166,16 @@ export default {
           }
         })
       }
+    },
+    setEditModal(songObject) {
+      this.currentSong = Object.assign({}, songObject)
+    },
+    filteredSongs() {
+      return this.songs.filter(
+        (song) =>
+          song.songTitle.toLowerCase().includes(this.searchInput.toLowerCase()) ||
+          song.artist.toLowerCase().includes(this.searchInput.toLowerCase())
+      )
     }
   }
 }

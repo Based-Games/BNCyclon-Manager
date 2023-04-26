@@ -71,6 +71,8 @@
             Server ID: <samp class="text-info">{{ currentSong.serverId }}</samp>
           </p>
           <form>
+            <h3>Song information</h3>
+            <hr class="border border-danger border-1 opacity-50" />
             <div class="row">
               <div class="mb-3 col">
                 <label class="form-label">Title</label>
@@ -100,21 +102,49 @@
                 <label class="form-label">Composer</label>
                 <input v-model="currentSong.composedBy" type="text" class="form-control" />
               </div>
-            </div>
-            <div class="row">
               <div class="mb-3 col">
                 <label class="form-label">Arranged by</label>
                 <input v-model="currentSong.arrangedBy" type="text" class="form-control" />
               </div>
+            </div>
+            <div class="row">
               <div class="mb-3 col">
                 <label class="form-label">Rounded difficulty</label>
                 <input v-model="currentSong.difficulty" type="text" class="form-control" />
               </div>
-            </div>
-            <div class="row">
               <div class="mb-3 col">
                 <label class="form-label">BPM</label>
                 <input v-model="currentSong.BPM" type="text" class="form-control" />
+              </div>
+            </div>
+            <h3>Chart information</h3>
+            <div v-for="pt in pt_types" :key="pt">
+              <hr class="border border-danger border-1 opacity-50" />
+              <div class="row row-cols-auto align-items-start">
+                <h4 class="text-primary-emphasis col">{{ pt }}</h4>
+                <div class="col">
+                  <input
+                    v-model="currentSong.chartData[pt].enabled"
+                    class="form-check-input me-2"
+                    type="checkbox"
+                  />
+                  <label class="form-label">Enabled?</label>
+                </div>
+              </div>
+              <div v-if="currentSong.chartData[pt].enabled" class="row">
+                <div class="mb-3 col-3">
+                  <label class="form-label">Difficulty</label>
+                  <input
+                    v-model="currentSong.chartData[pt].difficulty"
+                    type="text"
+                    class="form-control"
+                    max="12"
+                  />
+                </div>
+                <div class="mb-3 col-sm-9">
+                  <label class="form-label">Upload new chart</label>
+                  <input class="form-control" type="file" />
+                </div>
               </div>
             </div>
           </form>
@@ -146,7 +176,8 @@ export default {
       changesMade: false,
       songs: [],
       stages: null,
-      currentSong: {},
+      pt_types: ['EZ', 'NM', 'HD', 'PR', 'MX', 'S1', 'S2'],
+      currentSong: this.initChartData({}),
       searchInput: ''
     }
   },
@@ -169,6 +200,20 @@ export default {
     },
     setEditModal(songObject) {
       this.currentSong = Object.assign({}, songObject)
+      this.initChartData(this.currentSong)
+      const ptInfo = this.currentSong.ptInfo.split('_')
+      for (var pt of ptInfo) {
+        const pt_split = pt.split('-')
+        const pt_type = pt_split[0]
+        const pt_diff = pt_split[1]
+        this.currentSong.chartData[pt_type] = {
+          enabled: true,
+          difficulty: pt_diff,
+          chartId: this.currentSong[pt_type],
+          noteCount: this.currentSong[pt_type + 'Note'],
+          maxCombo: this.currentSong[pt_type + 'Combo']
+        }
+      }
     },
     filteredSongs() {
       return this.songs.filter(
@@ -177,6 +222,19 @@ export default {
           song.artist.toLowerCase().includes(this.searchInput.toLowerCase()) ||
           song.fileName.toLowerCase().includes(this.searchInput.toLowerCase())
       )
+    },
+    initChartData(currentSong) {
+      currentSong.chartData = {}
+      for (var type of ['EZ', 'NM', 'HD', 'PR', 'MX', 'S1', 'S2']) {
+        currentSong.chartData[type] = {
+          enabled: false,
+          difficulty: null,
+          chartId: null,
+          noteCount: null,
+          maxCombo: null
+        }
+      }
+      return currentSong
     }
   }
 }

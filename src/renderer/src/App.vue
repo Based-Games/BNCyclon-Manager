@@ -17,7 +17,8 @@
 </template>
 
 <script>
-import { mapGetters } from 'vuex'
+import axios from 'axios'
+import { mapGetters, mapMutations } from 'vuex'
 
 import NavBar from './components/NavBar.vue'
 import PageFooter from './components/PageFooter.vue'
@@ -71,8 +72,25 @@ export default {
   mounted() {
     window.addEventListener('hashchange', () => {
       this.currentPath = window.location.hash
-    }),
-      document.documentElement.setAttribute('data-bs-theme', this.theme)
+    })
+    document.documentElement.setAttribute('data-bs-theme', this.theme)
+    this.verifyFolder()
+  },
+  methods: {
+    ...mapMutations(['setGamePath']),
+    verifyFolder() {
+      if (this.settings.gamePath != null) {
+        axios
+          .post('http://localhost:7364/setGamePath', {
+            gamePath: this.settings.gamePath
+          })
+          .then((res) => {
+            if (!res.data.validPath) {
+              this.setGamePath(null)
+            }
+          })
+      }
+    }
   }
 }
 </script>

@@ -1,4 +1,10 @@
 <template>
+  <AppNotice
+    v-if="invalidPath"
+    notice="The path you provided is not a valid path!"
+    notice-type="danger"
+  />
+
   <h1 class="heading mb-4">Application Settings</h1>
 
   <hr class="border border-danger border-1 my-4 opacity-50" />
@@ -14,9 +20,10 @@
       settings.gamePath == null ? 'not set!' : settings.gamePath
     }}</samp>
   </p>
-  <form>
-    <button class="btn btn-outline-success" @click="selectFolder()">Set game path</button>
-  </form>
+  <div>
+    <button class="btn btn-outline-success me-2" @click="selectFolder()">Set game path</button>
+    <button class="btn btn-outline-danger" @click="resetFolder()">Reset path</button>
+  </div>
 
   <hr class="border border-danger border-1 my-4 opacity-50" />
   <h2 class="subheading">App theme</h2>
@@ -28,27 +35,48 @@
 </template>
 
 <script>
-import { mapState, mapMutations } from 'vuex'
+const { mapState, mapMutations } = require('vuex')
 const { ipcRenderer } = require('electron')
-var filePath = ''
+import axios from 'axios'
+import AppNotice from '../components/AppNotice.vue'
 
 export default {
   name: 'SettingsPage',
+  components: {
+    AppNotice
+  },
   data() {
     return {
-      filePath: filePath
+      invalidPath: false
     }
   },
   computed: {
     ...mapState(['settings'])
   },
   methods: {
-    ...mapMutations(['toggleTheme']),
+    ...mapMutations(['toggleTheme', 'setGamePath']),
     async selectFolder() {
-      var response = await ipcRenderer.invoke('open-file-explorer')
-      if (response != null) {
-        console.log(response)
+      var filePath = await ipcRenderer.invoke('open-file-explorer')
+      if (filePath != null) {
+        filePath = filePath.replace(/\\/g, '/') + '/'
+        axios
+          .post('http://localhost:7364/setGamePath', {
+            gamePath: filePath
+          })
+          .then((res) => {
+            if (res.data.validPath) {
+              this.setGamePath(filePath)
+              this.invalidPath = false
+              ipcRenderer.invoke('refresh-app')
+            } else {
+              this.invalidPath = true
+            }
+          })
       }
+    },
+    async resetFolder() {
+      this.setGamePath(null)
+      ipcRenderer.invoke('refresh-app')
     },
     async toggleThemeReload() {
       this.toggleTheme()

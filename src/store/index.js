@@ -20,6 +20,10 @@ export default createStore({
     toggleTheme(state) {
       state.settings.useLightTheme = !state.settings.useLightTheme
       localStorage.setItem('settings', JSON.stringify(state.settings))
+    },
+    setGamePath(state, gamePath) {
+      state.settings.gamePath = gamePath
+      localStorage.setItem('settings', JSON.stringify(state.settings))
     }
   }
 })

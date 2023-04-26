@@ -138,7 +138,6 @@
                     v-model="currentSong.chartData[pt].difficulty"
                     type="text"
                     class="form-control"
-                    max="12"
                   />
                 </div>
                 <div class="mb-3 col-sm-9">

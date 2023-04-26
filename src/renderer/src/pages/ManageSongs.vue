@@ -17,7 +17,7 @@
     v-model="searchInput"
     type="text"
     class="form-control border-primary mb-3"
-    placeholder="Search for song or artist"
+    placeholder="Search for song, artist, or file name"
   />
 
   <p v-if="searchInput && !filteredSongs().length" class="text-danger-emphasis py-2">
@@ -174,7 +174,8 @@ export default {
       return this.songs.filter(
         (song) =>
           song.songTitle.toLowerCase().includes(this.searchInput.toLowerCase()) ||
-          song.artist.toLowerCase().includes(this.searchInput.toLowerCase())
+          song.artist.toLowerCase().includes(this.searchInput.toLowerCase()) ||
+          song.fileName.toLowerCase().includes(this.searchInput.toLowerCase())
       )
     }
   }

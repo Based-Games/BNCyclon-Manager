@@ -58,3 +58,35 @@ server.post('/setGamePath', async (req, res) => {
     })
   }
 })
+
+server.get('/getMusicLibrary', async (req, res) => {
+  const musicLibraryPath = verifiedPath + 'Data/System/JSON/musicLibrary.json'
+  const hausStagesPath = verifiedPath + 'Data/System/JSON/hausStages.json'
+  if (!(await fse.pathExists(musicLibraryPath))) {
+    res.json({
+      validFile: false,
+      file: 'musicLibrary.json'
+    })
+  }
+  if (!(await fse.pathExists(hausStagesPath))) {
+    res.json({
+      validFile: false,
+      file: 'hausStages.json'
+    })
+  }
+
+  const musicLibrary = require(musicLibraryPath)
+  const hausStages = require(hausStagesPath)
+  res.json({
+    validFile: true,
+    musicLibrary: musicLibrary.songs,
+    hausStages: hausStages.stages
+  })
+})
+
+server.get('/loadSongJacket', async (req, res) => {
+  const songPath = verifiedPath + 'Data/SongDiscBig/' + req.query.fileName + '.png'
+  const exists = await fse.pathExists(songPath)
+  if (exists) res.sendFile(songPath)
+  else res.sendStatus(404)
+})

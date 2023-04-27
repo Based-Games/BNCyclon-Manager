@@ -189,10 +189,6 @@
                     class="form-control"
                   />
                 </div>
-                <div class="mb-3 col-sm-9">
-                  <label class="form-label">Upload new chart</label>
-                  <input class="form-control" type="file" />
-                </div>
               </div>
             </div>
             <div class="modal-footer mt-3">

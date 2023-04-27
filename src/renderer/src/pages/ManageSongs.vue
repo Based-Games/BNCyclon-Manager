@@ -189,7 +189,7 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h1 id="exampleModalLabel" class="modal-title fs-5">Delete Song</h1>
+          <h1 class="modal-title fs-5">Delete Song</h1>
         </div>
         <div class="modal-body">
           <AppNotice

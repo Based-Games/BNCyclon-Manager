@@ -170,6 +170,45 @@ server.get('/getMusicLibrary', async (req, res) => {
   })
 })
 
+server.post('/saveMusicLibrary', async (req, res) => {
+  const [musicLibrary, hasChanges] = await getMusicLibrary()
+  if (musicLibrary === null) {
+    res.json({
+      validFile: false,
+      file: 'musicLibrary.json'
+    })
+  }
+
+  const musicLibraryPath = verifiedPath + 'Data/System/JSON/musicLibrary.json'
+  if (!(await fse.pathExists(musicLibraryPath))) {
+    res.json({
+      validFile: false
+    })
+    return
+  }
+
+  const musicLibraryJSON = await fsp.readFile(musicLibraryPath, 'utf8')
+  await fsp.writeFile(musicLibraryPath + '.bak', musicLibraryJSON, function (err) {
+    if (err) console.log('error', err)
+  })
+
+  const moddedLibrary = JSON.stringify(musicLibrary, undefined, 4)
+  await fsp.writeFile(musicLibraryPath, moddedLibrary, function (err) {
+    if (err) console.log('error', err)
+  })
+
+  await writeMusicChanges({
+    changes: [],
+    creations: [],
+    deletions: []
+  })
+
+  res.json({
+    validFile: true,
+    changesMade: hasChanges
+  })
+})
+
 server.get('/loadSongJacket', async (req, res) => {
   const songPath = verifiedPath + 'Data/SongDiscBig/' + req.query.fileName + '.png'
   const exists = await fse.pathExists(songPath)

@@ -10,7 +10,14 @@
   <p>
     Use this to change, add, or remove songs from <samp class="text-info">musicLibrary.json</samp>
   </p>
-  <button class="btn btn-outline-success">Add song</button>
+  <button
+    data-bs-toggle="modal"
+    data-bs-target="#songModal"
+    class="btn btn-outline-success"
+    @click="setCurrentSong(null)"
+  >
+    Add song
+  </button>
   <hr class="border border-danger border-1 my-4 opacity-50" />
 
   <input
@@ -22,6 +29,9 @@
 
   <p v-if="searchInput && !filteredSongs().length" class="text-danger-emphasis py-2">
     No songs found!
+  </p>
+  <p v-if="filteredSongs().length" class="text-success-emphasis py-2">
+    Loaded {{ filteredSongs().length }} songs
   </p>
 
   <div class="row">
@@ -38,42 +48,58 @@
           <a
             class="btn btn-outline-info me-2"
             data-bs-toggle="modal"
-            data-bs-target="#editModal"
-            @click="setEditModal(song)"
+            data-bs-target="#songModal"
+            @click="setCurrentSong(song)"
             >Edit</a
           >
-          <a class="btn btn-outline-danger">Delete</a>
+          <a
+            class="btn btn-outline-danger"
+            data-bs-toggle="modal"
+            data-bs-target="#deleteModal"
+            @click="setCurrentSong(song)"
+            >Delete</a
+          >
         </div>
       </div>
     </div>
   </div>
 
-  <div id="editModal" class="modal">
+  <div id="songModal" class="modal fade">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">
+          <h5 v-if="editing" class="modal-title">
             Editing: {{ currentSong.songTitle }} - {{ currentSong.artist }}
           </h5>
-          <button
-            type="button"
-            class="btn-close"
-            data-bs-dismiss="modal"
-            aria-label="Close"
-          ></button>
+          <h5 v-if="!editing" class="modal-title">Add Song</h5>
         </div>
         <div class="modal-body">
-          <AppNotice notice="You cannot change the file name or server ID" notice-type="info" />
-          <p>
-            File name: <samp class="text-info">{{ currentSong.fileName }}</samp>
-          </p>
-          <p>
-            Server ID: <samp class="text-info">{{ currentSong.serverId }}</samp>
-          </p>
+          <div v-if="editing">
+            <AppNotice notice="You cannot change the file name or server ID" notice-type="info" />
+            <p>
+              File name: <samp class="text-info">{{ currentSong.fileName }}</samp>
+            </p>
+            <p>
+              Server ID: <samp class="text-info">{{ currentSong.serverId }}</samp>
+            </p>
+          </div>
+          <div v-if="!editing">
+            <AppNotice
+              notice="You won't be able to change the file name or server ID after creation"
+              notice-type="warning"
+            />
+            <p>
+              Server ID: <samp class="text-info">{{ currentSong.serverId }}</samp>
+            </p>
+          </div>
           <form>
             <h3>Song information</h3>
             <hr class="border border-danger border-1 opacity-50" />
             <div class="row">
+              <div v-if="!editing" class="mb-3 col">
+                <label class="form-label">File name</label>
+                <input v-model="currentSong.fileName" type="text" class="form-control" />
+              </div>
               <div class="mb-3 col">
                 <label class="form-label">Title</label>
                 <input v-model="currentSong.songTitle" type="text" class="form-control" />
@@ -152,7 +178,33 @@
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
             Cancel
           </button>
-          <button type="button" class="btn btn-outline-primary">Save changes</button>
+          <button v-if="editing" type="button" class="btn btn-outline-primary">Save</button>
+          <button v-if="!editing" type="button" class="btn btn-outline-success">Add Song</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="deleteModal" class="modal fade" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 id="exampleModalLabel" class="modal-title fs-5">Delete Song</h1>
+        </div>
+        <div class="modal-body">
+          <AppNotice
+            notice="This will not remove the song from any disc sets or missions"
+            notice-type="warning"
+          />
+          <h2>
+            Are you sure you want to delete {{ currentSong.songTitle }} - {{ currentSong.artist }}?
+          </h2>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Close
+          </button>
+          <button type="button" class="btn btn-outline-danger">Delete</button>
         </div>
       </div>
     </div>
@@ -173,6 +225,7 @@ export default {
   data() {
     return {
       changesMade: false,
+      editing: true,
       songs: [],
       stages: null,
       pt_types: ['EZ', 'NM', 'HD', 'PR', 'MX', 'S1', 'S2'],
@@ -197,9 +250,18 @@ export default {
         })
       }
     },
-    setEditModal(songObject) {
+    setCurrentSong(songObject) {
+      if (songObject == null) {
+        this.editing = false
+        songObject = {}
+      } else {
+        this.editing = true
+      }
       this.currentSong = Object.assign({}, songObject)
       this.initChartData(this.currentSong)
+      if (!this.editing) {
+        this.currentSong.serverId = this.getServerId()
+      }
       const ptInfo = this.currentSong.ptInfo.split('_')
       for (var pt of ptInfo) {
         const pt_split = pt.split('-')
@@ -234,6 +296,16 @@ export default {
         }
       }
       return currentSong
+    },
+    getServerId() {
+      const chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'
+      let result = ''
+      let counter = 0
+      while (counter < 24) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length))
+        counter += 1
+      }
+      return result
     }
   }
 }

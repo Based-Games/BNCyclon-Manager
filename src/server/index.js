@@ -130,6 +130,18 @@ server.get('/getMusicLibrary', async (req, res) => {
     }
   }
 
+  if (musicChanges.deletions !== undefined) {
+    for (const deletion of musicChanges.deletions) {
+      changesMade = true
+      musicLibrary.songs.splice(
+        musicLibrary.songs.findIndex(function (i) {
+          return i.id === deletion
+        }),
+        1
+      )
+    }
+  }
+
   res.json({
     validFile: true,
     musicLibrary: musicLibrary.songs,
@@ -221,7 +233,27 @@ server.post('/updateSong', async (req, res) => {
   })
 })
 
-server.post('/deleteSong', async (req, res) => {})
+server.post('/deleteSong', async (req, res) => {
+  var musicChanges = await getMusicChanges()
+  if (musicChanges.deletions == undefined) {
+    musicChanges.deletions = []
+  }
+
+  if (req.body.songId != undefined) {
+    musicChanges.deletions.push(req.body.songId)
+    musicChanges.deletions = [...new Set(musicChanges.deletions)]
+    res.json({
+      saved: true
+    })
+    await writeMusicChanges(musicChanges)
+    return
+  } else {
+    res.json({
+      saved: false
+    })
+    return
+  }
+})
 
 server.post('/createSong', async (req, res) => {})
 

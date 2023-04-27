@@ -297,7 +297,7 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h1 class="modal-title fs-5">Are you absolutely positive?</h1>
+          <h1 class="modal-title fs-5">Are you really?</h1>
         </div>
         <div class="modal-body">
           <h2>Let me ask you again. <br />Are you sure you want to reset?</h2>

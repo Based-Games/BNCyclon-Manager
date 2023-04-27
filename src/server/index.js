@@ -85,36 +85,17 @@ async function getMusicLibrary() {
     return null
   }
   const musicLibraryData = await fsp.readFile(musicLibraryPath, 'utf8')
-  return JSON.parse(musicLibraryData)
-}
-
-server.post('/setGamePath', async (req, res) => {
-  var gamePath = req.body.gamePath
-
-  const valid = await testGamePath(gamePath)
-  if (valid) {
-    verifiedPath = gamePath
-    res.json({
-      validPath: true
-    })
-  } else {
-    res.json({
-      validPath: false
-    })
-  }
-})
-
-server.get('/getMusicLibrary', async (req, res) => {
-  const musicLibrary = await getMusicLibrary()
-  if (musicLibrary === null) {
-    res.json({
-      validFile: false,
-      file: 'musicLibrary.json'
-    })
-  }
+  var musicLibrary = JSON.parse(musicLibraryData)
 
   const musicChanges = await getMusicChanges()
   var changesMade = false
+
+  if (musicChanges.creations !== undefined) {
+    for (const creation of musicChanges.creations) {
+      changesMade = true
+      musicLibrary.songs.push(creation)
+    }
+  }
 
   if (musicChanges.changes !== undefined) {
     for (const change in musicChanges.changes) {
@@ -142,6 +123,46 @@ server.get('/getMusicLibrary', async (req, res) => {
     }
   }
 
+  return [musicLibrary, changesMade]
+}
+
+function getNextSongID(musicData) {
+  let maxId = 0
+  for (let i = 0; i < musicData.length; i++) {
+    const obj = musicData[i]
+    if (obj.id > maxId) {
+      maxId = obj.id
+    }
+  }
+
+  return maxId + 1
+}
+
+server.post('/setGamePath', async (req, res) => {
+  var gamePath = req.body.gamePath
+
+  const valid = await testGamePath(gamePath)
+  if (valid) {
+    verifiedPath = gamePath
+    res.json({
+      validPath: true
+    })
+  } else {
+    res.json({
+      validPath: false
+    })
+  }
+})
+
+server.get('/getMusicLibrary', async (req, res) => {
+  const [musicLibrary, changesMade] = await getMusicLibrary()
+  if (musicLibrary === null) {
+    res.json({
+      validFile: false,
+      file: 'musicLibrary.json'
+    })
+  }
+
   res.json({
     validFile: true,
     musicLibrary: musicLibrary.songs,
@@ -157,11 +178,10 @@ server.get('/loadSongJacket', async (req, res) => {
 })
 
 server.post('/updateSong', async (req, res) => {
-  const musicLibrary = await getMusicLibrary()
+  const [musicLibrary, changesMade] = await getMusicLibrary()
   if (musicLibrary === null) {
     res.json({
-      validFile: false,
-      file: 'musicLibrary.json'
+      saved: false
     })
   }
   var newSongData = req.body.song
@@ -229,7 +249,8 @@ server.post('/updateSong', async (req, res) => {
   await writeMusicChanges(musicChanges)
 
   res.json({
-    saved: true
+    saved: true,
+    hasChanges: changesMade
   })
 })
 
@@ -255,7 +276,37 @@ server.post('/deleteSong', async (req, res) => {
   }
 })
 
-server.post('/createSong', async (req, res) => {})
+server.post('/createSong', async (req, res) => {
+  const [musicLibrary, changesMade] = await getMusicLibrary()
+  if (musicLibrary === null) {
+    res.json({
+      saved: false
+    })
+  }
+  var newSongData = req.body.song
+  if (newSongData === undefined) {
+    res.json({
+      saved: false
+    })
+    return
+  }
+  newSongData = chartDataToPT(newSongData)
+  delete newSongData.chartData
+  const nextId = getNextSongID(musicLibrary.songs)
+  newSongData.id = nextId
+
+  var musicChanges = await getMusicChanges()
+  if (musicChanges.creations == undefined) {
+    musicChanges.creations = []
+  }
+  musicChanges.creations.push(newSongData)
+  await writeMusicChanges(musicChanges)
+
+  res.json({
+    saved: true,
+    hasChanges: changesMade
+  })
+})
 
 server.post('/resetChanges', async (req, res) => {
   await writeMusicChanges({

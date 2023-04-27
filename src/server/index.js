@@ -44,37 +44,6 @@ async function testGamePath(gamePath) {
   return valid
 }
 
-function initChartData(songData) {
-  songData.chartData = {}
-  for (const type of ['EZ', 'NM', 'HD', 'PR', 'MX', 'S1', 'S2']) {
-    songData.chartData[type] = {
-      enabled: false,
-      difficulty: null,
-      chartId: null,
-      noteCount: null,
-      maxCombo: null
-    }
-  }
-  return songData
-}
-
-function ptInfoToChartData(songData) {
-  const ptInfo = songData.ptInfo.split('_')
-  for (var pt of ptInfo) {
-    const pt_split = pt.split('-')
-    const pt_type = pt_split[0]
-    const pt_diff = Number(pt_split[1])
-    songData.chartData[pt_type] = {
-      enabled: true,
-      difficulty: pt_diff,
-      chartId: songData[pt_type],
-      noteCount: songData[pt_type + 'Note'],
-      maxCombo: songData[pt_type + 'Combo']
-    }
-  }
-  return songData
-}
-
 function chartDataToPT(songData) {
   const chartData = songData.chartData
   var ptInfo = ''

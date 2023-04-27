@@ -14,10 +14,18 @@
   <button
     data-bs-toggle="modal"
     data-bs-target="#songModal"
-    class="btn btn-outline-success"
+    class="btn btn-outline-success me-2"
     @click="setCurrentSong(null)"
   >
     Add song
+  </button>
+  <button
+    v-if="changesMade"
+    data-bs-toggle="modal"
+    data-bs-target="#resetModal"
+    class="btn btn-outline-danger"
+  >
+    Reset changes
   </button>
   <hr class="border border-danger border-1 my-4 opacity-50" />
 
@@ -189,6 +197,26 @@
                     class="form-control"
                   />
                 </div>
+                <div class="mb-3 col-3">
+                  <label class="form-label">Note Count</label>
+                  <input
+                    v-model="currentSong.chartData[pt].noteCount"
+                    type="number"
+                    min="1"
+                    required
+                    class="form-control"
+                  />
+                </div>
+                <div class="mb-3 col-3">
+                  <label class="form-label">Max Combo</label>
+                  <input
+                    v-model="currentSong.chartData[pt].maxCombo"
+                    type="number"
+                    min="1"
+                    required
+                    class="form-control"
+                  />
+                </div>
               </div>
             </div>
             <div class="modal-footer mt-3">
@@ -231,6 +259,61 @@
             @click="sendSongDeletion(currentSong.id)"
           >
             Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resetModal" class="modal fade" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5">Reset all changes</h1>
+        </div>
+        <div class="modal-body">
+          <h2>Are you sure you want to reset all changes?</h2>
+          <h4 class="text-danger font-bold text-bold">You cannot undo this.</h4>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Close
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            data-bs-dismiss="modal"
+            data-bs-toggle="modal"
+            data-bs-target="#resetModalAgain"
+          >
+            Reset
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="resetModalAgain" class="modal fade" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h1 class="modal-title fs-5">Are you absolutely positive?</h1>
+        </div>
+        <div class="modal-body">
+          <h2>Let me ask you again. <br />Are you sure you want to reset?</h2>
+          <h4 class="text-danger font-bold text-bold">You cannot undo this.</h4>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+            Close
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            data-bs-dismiss="modal"
+            @click="sendChangeReset()"
+          >
+            Reset
           </button>
         </div>
       </div>
@@ -294,6 +377,7 @@ export default {
           .post('http://localhost:7364/updateSong', { song: songObject })
           .then((res) => {
             this.saveError = true
+            this.errorMsg = 'The server was unable to save the changes'
             if (res.data.saved) {
               this.saveError = false
               this.getMusicLibrary()
@@ -312,6 +396,7 @@ export default {
           .post('http://localhost:7364/deleteSong', { songId: songId })
           .then((res) => {
             this.saveError = true
+            this.errorMsg = 'The server was unable to save the changes'
             if (res.data.saved) {
               this.saveError = false
               this.getMusicLibrary()
@@ -329,6 +414,25 @@ export default {
           .post('http://localhost:7364/createSong', { song: songObject })
           .then((res) => {
             this.saveError = true
+            this.errorMsg = 'The server was unable to save the changes'
+            if (res.data.saved) {
+              this.saveError = false
+              this.getMusicLibrary()
+            }
+          })
+          .catch(() => {
+            this.errorMsg = 'The server was unable to save the changes'
+            this.saveError = true
+          })
+      }
+    },
+    sendChangeReset() {
+      if (this.settings.gamePath != null) {
+        axios
+          .post('http://localhost:7364/resetChanges', {})
+          .then((res) => {
+            this.saveError = true
+            this.errorMsg = 'The server was unable to save the changes'
             if (res.data.saved) {
               this.saveError = false
               this.getMusicLibrary()
@@ -356,7 +460,7 @@ export default {
         for (var pt of ptInfo) {
           const pt_split = pt.split('-')
           const pt_type = pt_split[0]
-          const pt_diff = pt_split[1]
+          const pt_diff = Number(pt_split[1])
           this.currentSong.chartData[pt_type] = {
             enabled: true,
             difficulty: pt_diff,

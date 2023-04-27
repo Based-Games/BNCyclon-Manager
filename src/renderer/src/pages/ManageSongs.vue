@@ -5,6 +5,7 @@
     notice="You have unsaved changes! You must use the export menu to save."
     notice-type="warning"
   />
+  <AppNotice v-if="saveError" :notice="errorMsg" notice-type="danger" />
 
   <h1>Manage Songs</h1>
   <p>
@@ -92,31 +93,36 @@
               Server ID: <samp class="text-info">{{ currentSong.serverId }}</samp>
             </p>
           </div>
-          <form>
+          <form @submit.prevent="submitDataForm(currentSong)">
             <h3>Song information</h3>
             <hr class="border border-danger border-1 opacity-50" />
             <div class="row">
               <div v-if="!editing" class="mb-3 col">
                 <label class="form-label">File name</label>
-                <input v-model="currentSong.fileName" type="text" class="form-control" />
+                <input v-model="currentSong.fileName" type="text" class="form-control" required />
               </div>
               <div class="mb-3 col">
                 <label class="form-label">Title</label>
-                <input v-model="currentSong.songTitle" type="text" class="form-control" />
+                <input v-model="currentSong.songTitle" type="text" class="form-control" required />
               </div>
               <div class="mb-3 col">
                 <label class="form-label">In-game title</label>
-                <input v-model="currentSong.inGameTitleEn" type="text" class="form-control" />
+                <input
+                  v-model="currentSong.inGameTitleEn"
+                  type="text"
+                  class="form-control"
+                  required
+                />
               </div>
             </div>
             <div class="row">
               <div class="mb-3 col">
                 <label class="form-label">Artist</label>
-                <input v-model="currentSong.artist" type="text" class="form-control" />
+                <input v-model="currentSong.artist" type="text" class="form-control" required />
               </div>
               <div class="mb-3 col">
                 <label class="form-label">Genre</label>
-                <input v-model="currentSong.genre" type="text" class="form-control" />
+                <input v-model="currentSong.genre" type="text" class="form-control" required />
               </div>
             </div>
             <div class="row">
@@ -136,11 +142,25 @@
             <div class="row">
               <div class="mb-3 col">
                 <label class="form-label">Rounded difficulty</label>
-                <input v-model="currentSong.difficulty" type="text" class="form-control" />
+                <input
+                  v-model="currentSong.difficulty"
+                  type="number"
+                  min="1"
+                  max="12"
+                  class="form-control"
+                  required
+                />
               </div>
               <div class="mb-3 col">
                 <label class="form-label">BPM</label>
-                <input v-model="currentSong.BPM" type="text" class="form-control" />
+                <input
+                  v-model="currentSong.BPM"
+                  type="number"
+                  min="1"
+                  max="900"
+                  class="form-control"
+                  required
+                />
               </div>
             </div>
             <h3>Chart information</h3>
@@ -162,7 +182,10 @@
                   <label class="form-label">Difficulty</label>
                   <input
                     v-model="currentSong.chartData[pt].difficulty"
-                    type="text"
+                    type="number"
+                    min="1"
+                    max="12"
+                    required
                     class="form-control"
                   />
                 </div>
@@ -172,14 +195,16 @@
                 </div>
               </div>
             </div>
+            <div class="modal-footer mt-3">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                Cancel
+              </button>
+              <button v-if="editing" type="submit" class="btn btn-outline-primary">Save</button>
+              <button v-if="!editing" type="submit" class="btn btn-outline-success">
+                Add Song
+              </button>
+            </div>
           </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            Cancel
-          </button>
-          <button v-if="editing" type="button" class="btn btn-outline-primary">Save</button>
-          <button v-if="!editing" type="button" class="btn btn-outline-success">Add Song</button>
         </div>
       </div>
     </div>
@@ -204,7 +229,13 @@
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
             Close
           </button>
-          <button type="button" class="btn btn-outline-danger">Delete</button>
+          <button
+            type="button"
+            class="btn btn-outline-danger"
+            @click="sendSongDeletion(currentSong.id)"
+          >
+            Delete
+          </button>
         </div>
       </div>
     </div>
@@ -214,6 +245,7 @@
 <script>
 import axios from 'axios'
 import { mapState } from 'vuex'
+import { Modal } from 'bootstrap'
 
 import AppNotice from '../components/AppNotice.vue'
 
@@ -224,10 +256,11 @@ export default {
   },
   data() {
     return {
-      changesMade: false,
       editing: true,
+      changesMade: false,
+      saveError: false,
+      errorMsg: '',
       songs: [],
-      stages: null,
       pt_types: ['EZ', 'NM', 'HD', 'PR', 'MX', 'S1', 'S2'],
       currentSong: this.initChartData({}),
       searchInput: ''
@@ -242,18 +275,79 @@ export default {
   methods: {
     getMusicLibrary() {
       if (this.settings.gamePath != null) {
-        axios.get('http://localhost:7364/getMusicLibrary').then((res) => {
-          if (res.data.validFile) {
-            this.songs = res.data.musicLibrary
-            this.stages = res.data.hausStages
-          }
-        })
+        axios
+          .get('http://localhost:7364/getMusicLibrary')
+          .then((res) => {
+            this.saveError = true
+            this.errorMsg = 'The server was unable to find your music database'
+            if (res.data.validFile) {
+              this.saveError = false
+              this.songs = res.data.musicLibrary
+              this.changesMade = res.data.hasChanges
+            }
+          })
+          .catch(() => {
+            this.errorMsg = 'The server was unable to load songs'
+            this.saveError = true
+          })
+      }
+    },
+    sendSongChange(songObject) {
+      if (this.settings.gamePath != null) {
+        axios
+          .post('http://localhost:7364/updateSong', { song: songObject })
+          .then((res) => {
+            this.saveError = true
+            if (res.data.saved) {
+              this.saveError = false
+              this.getMusicLibrary()
+            }
+          })
+          .catch(() => {
+            this.errorMsg = 'The server was unable to save the changes'
+            this.saveError = true
+          })
+      }
+    },
+    sendSongDeletion(songId) {
+      this.closeModal('deleteModal')
+      if (this.settings.gamePath != null) {
+        axios
+          .post('http://localhost:7364/deleteSong', { songId: songId })
+          .then((res) => {
+            this.saveError = true
+            if (res.data.saved) {
+              this.saveError = false
+              this.getMusicLibrary()
+            }
+          })
+          .catch(() => {
+            this.errorMsg = 'The server was unable to save the changes'
+            this.saveError = true
+          })
+      }
+    },
+    sendNewSong(songObject) {
+      if (this.settings.gamePath != null) {
+        axios
+          .post('http://localhost:7364/createSong', { song: songObject })
+          .then((res) => {
+            this.saveError = true
+            if (res.data.saved) {
+              this.saveError = false
+              this.getMusicLibrary()
+            }
+          })
+          .catch(() => {
+            this.errorMsg = 'The server was unable to save the changes'
+            this.saveError = true
+          })
       }
     },
     setCurrentSong(songObject) {
-      if (songObject == null) {
+      if (songObject === null) {
         this.editing = false
-        songObject = {}
+        songObject = { ptInfo: null }
       } else {
         this.editing = true
       }
@@ -261,18 +355,19 @@ export default {
       this.initChartData(this.currentSong)
       if (!this.editing) {
         this.currentSong.serverId = this.getServerId()
-      }
-      const ptInfo = this.currentSong.ptInfo.split('_')
-      for (var pt of ptInfo) {
-        const pt_split = pt.split('-')
-        const pt_type = pt_split[0]
-        const pt_diff = pt_split[1]
-        this.currentSong.chartData[pt_type] = {
-          enabled: true,
-          difficulty: pt_diff,
-          chartId: this.currentSong[pt_type],
-          noteCount: this.currentSong[pt_type + 'Note'],
-          maxCombo: this.currentSong[pt_type + 'Combo']
+      } else {
+        const ptInfo = this.currentSong.ptInfo.split('_')
+        for (var pt of ptInfo) {
+          const pt_split = pt.split('-')
+          const pt_type = pt_split[0]
+          const pt_diff = pt_split[1]
+          this.currentSong.chartData[pt_type] = {
+            enabled: true,
+            difficulty: pt_diff,
+            chartId: this.currentSong[pt_type],
+            noteCount: this.currentSong[pt_type + 'Note'],
+            maxCombo: this.currentSong[pt_type + 'Combo']
+          }
         }
       }
     },
@@ -306,6 +401,34 @@ export default {
         counter += 1
       }
       return result
+    },
+    closeModal(modalName) {
+      const modal = document.getElementById(modalName)
+      const bootstrapModal = Modal.getInstance(modal)
+      bootstrapModal.hide()
+    },
+    submitDataForm() {
+      this.closeModal('songModal')
+
+      var chartEnabled = false
+      for (const chart in this.currentSong.chartData) {
+        if (this.currentSong.chartData[chart].enabled) {
+          chartEnabled = true
+        }
+      }
+      if (!chartEnabled) {
+        this.errorMsg = 'You must enable at least 1 chart!'
+        this.saveError = true
+        return
+      } else {
+        this.saveError = false
+      }
+
+      if (this.editing) {
+        this.sendSongChange(this.currentSong)
+      } else {
+        this.sendNewSong(this.currentSong)
+      }
     }
   }
 }

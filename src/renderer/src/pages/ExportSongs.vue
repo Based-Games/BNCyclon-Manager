@@ -9,8 +9,10 @@
   <h1>Export Song Data</h1>
   <p>
     This will export all of your active modifications to
-    <samp class="text-info">musicLibrary.json</samp>. <br />A backup of your current library will be
-    made as <samp class="text-info">musicLibrary.json.bak</samp>.
+    <samp class="text-info">musicLibrary.json</samp> and
+    <samp class="text-info">hausStages.json</samp>. <br />A backup of your current library will be
+    made as <samp class="text-info">musicLibrary.json.bak</samp> and
+    <samp class="text-info">hausStages.json.bak</samp>.
   </p>
 
   <button v-if="changesMade" class="btn btn-outline-success me-2" @click="runExport()">

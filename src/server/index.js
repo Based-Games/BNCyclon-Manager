@@ -47,13 +47,15 @@ async function testGamePath(gamePath) {
 function chartDataToPT(songData) {
   const chartData = songData.chartData
   var ptInfo = ''
+  var tIndex = 1
   for (const type of ['EZ', 'NM', 'HD', 'PR', 'MX', 'S1', 'S2']) {
     if (chartData[type].enabled) {
       ptInfo += type + '-' + chartData[type].difficulty.toString() + '_'
     }
-    songData[type] = chartData[type].chartId
+    songData[type] = tIndex
     songData[type + 'Note'] = chartData[type].noteCount != null ? chartData[type].noteCount : 0
     songData[type + 'Combo'] = chartData[type].maxCombo != null ? chartData[type].maxCombo : 0
+    tIndex += 1
   }
   songData.ptInfo = ptInfo.substring(0, ptInfo.length - 1)
   return songData
@@ -138,6 +140,51 @@ function getNextSongID(musicData) {
   return maxId + 1
 }
 
+async function generateHausStages(musicData) {
+  var hausStages = { stages: [] }
+  var songIndex = 1
+  for (const song of musicData.songs) {
+    for (const index of [1, 2, 3, 4]) {
+      var stageData = {
+        id: songIndex,
+        stage: index,
+        songId: song.id
+      }
+      const ptInfo = song.ptInfo.split('_')
+      var usedDiffs = []
+      for (pt of ptInfo) {
+        usedDiffs.push(pt.split('-')[0])
+      }
+
+      for (var pt of ['EZ', 'NM', 'HD', 'PR', 'MX', 'S1', 'S2']) {
+        if (usedDiffs.includes(pt)) {
+          stageData[pt] = true
+        } else {
+          stageData[pt] = false
+        }
+      }
+
+      hausStages.stages.push(stageData)
+      songIndex += 1
+    }
+  }
+
+  const hausStagesPath = verifiedPath + 'Data/System/JSON/hausStages.json'
+  if (!(await fse.pathExists(hausStagesPath))) {
+    return
+  }
+
+  const hausStagesJSON = await fsp.readFile(hausStagesPath, 'utf8')
+  await fsp.writeFile(hausStagesPath + '.bak', hausStagesJSON, function (err) {
+    if (err) console.log('error', err)
+  })
+
+  const moddedHausStages = JSON.stringify(hausStages, undefined, 4)
+  await fsp.writeFile(hausStagesPath, moddedHausStages, function (err) {
+    if (err) console.log('error', err)
+  })
+}
+
 server.post('/setGamePath', async (req, res) => {
   var gamePath = req.body.gamePath
 
@@ -202,6 +249,8 @@ server.post('/saveMusicLibrary', async (req, res) => {
     creations: [],
     deletions: []
   })
+
+  await generateHausStages(musicLibrary)
 
   res.json({
     validFile: true,
@@ -322,6 +371,46 @@ server.post('/createSong', async (req, res) => {
       saved: false
     })
   }
+
+  var newSong = {
+    id: 0,
+    fileName: '',
+    songTitle: '',
+    inGameTitleKr: '',
+    inGameTitleEn: '',
+    genre: '',
+    difficulty: 0,
+    BPM: 0,
+    composedBy: '',
+    arrangedBy: '',
+    vocalist: '',
+    artist: '',
+    ptInfo: '',
+    serverId: '',
+    EZ: 0,
+    NM: 0,
+    HD: 0,
+    PR: 0,
+    MX: 0,
+    S1: 0,
+    S2: 0,
+    EZNote: 0,
+    EZCombo: 0,
+    NMNote: 0,
+    NMCombo: 0,
+    HDNote: 0,
+    HDCombo: 0,
+    PRNote: 0,
+    PRCombo: 0,
+    MXNote: 0,
+    MXCombo: 0,
+    S1Note: 0,
+    S1Combo: 0,
+    S2Note: 0,
+    S2Combo: 0,
+    groupSet: 1
+  }
+
   var newSongData = req.body.song
   if (newSongData === undefined) {
     res.json({
@@ -330,15 +419,60 @@ server.post('/createSong', async (req, res) => {
     return
   }
   newSongData = chartDataToPT(newSongData)
-  delete newSongData.chartData
   const nextId = getNextSongID(musicLibrary.songs)
   newSongData.id = nextId
+  newSongData.inGameTitleKr = newSongData.inGameTitleEn
+  newSongData.composedBy = newSongData.composedBy !== undefined ? newSongData.composedBy : ''
+  newSongData.vocalist = newSongData.vocalist !== undefined ? newSongData.vocalist : ''
+  newSongData.arrangedBy = newSongData.arrangedBy !== undefined ? newSongData.arrangedBy : ''
+
+  const checkedKeys = [
+    'id',
+    'fileName',
+    'songTitle',
+    'inGameTitleEn',
+    'inGameTitleKr',
+    'genre',
+    'difficulty',
+    'BPM',
+    'composedBy',
+    'arrangedBy',
+    'vocalist',
+    'artist',
+    'ptInfo',
+    'serverId',
+    'EZ',
+    'NM',
+    'HD',
+    'PR',
+    'MX',
+    'S1',
+    'S2',
+    'EZNote',
+    'NMNote',
+    'HDNote',
+    'PRNote',
+    'MXNote',
+    'S1Note',
+    'S2Note',
+    'EZCombo',
+    'NMCombo',
+    'HDCombo',
+    'PRCombo',
+    'MXCombo',
+    'S1Combo',
+    'S2Combo'
+  ]
+
+  for (const key of checkedKeys) {
+    newSong[key] = newSongData[key]
+  }
 
   var musicChanges = await getMusicChanges()
   if (musicChanges.creations == undefined) {
     musicChanges.creations = []
   }
-  musicChanges.creations.push(newSongData)
+  musicChanges.creations.push(newSong)
   await writeMusicChanges(musicChanges)
 
   res.json({
